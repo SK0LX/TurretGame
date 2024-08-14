@@ -1,34 +1,53 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class Gun : MonoBehaviour
 {
     public GameObject bulletPrefab; // Префаб пули
-    public float bulletSpeed = 10f; // Скорость пули
-    public float bulletSpread = 5f; // Разброс пули (в градусах)
-    public float fireRate = 0.1f; // Скорость стрельбы (в секундах)
-    public AudioSource audioSource;
-
-    public Player player;
+    public float bulletSpeed; // Скорость пули
+    public float bulletSpread; // Разброс пули (в градусах)
+    public float fireRate; // Скорость стрельбы (в секундах)
+    
+    
+    public AudioSource shotAudio;
+    public AudioSource soundAfterShot;
+    public AudioSource reloadGunAudio;
     
 
+    public Player player;
+
+
+    private int clickButton; //0 - nothing, 1 - click, 2 - longClick
+    
     private float nextFireTime; // Время следующего выстрела
 
     private void Update()
     {
-        if (Input.GetMouseButton(0) && Time.time > nextFireTime) 
+        if (!reloadGunAudio.isPlaying)
         {
-            if (player.ammo <= 0)
+            if (Input.GetMouseButton(0) && Time.time > nextFireTime)
             {
-                player.ReloadGun();
+                clickButton = 1;
+                if (player.ammo <= 0)
+                {
+                    StartCoroutine(ReloadCoroutine());
+                }
+                else
+                {
+                    Shoot();
+                    player.ammo -= 1;
+                    shotAudio.Play();
+                    nextFireTime = Time.time + fireRate; // Задержка перед следующим выстрелом
+                }
             }
-            else
+            if (clickButton == 1 && !Input.GetMouseButton(0))
             {
-                Shoot();
-                player.ammo -= 1;
-                audioSource.Play();
-                nextFireTime = Time.time + fireRate; // Задержка перед следующим выстрелом
+                soundAfterShot.Play();
+                clickButton = 0;
             }
         }
+        
     }
 
     private void Shoot()
@@ -60,5 +79,15 @@ public class Gun : MonoBehaviour
         rb.velocity = finalDirection * bulletSpeed;
         
         Destroy(bullet, timeToTarget); 
+    }
+
+    private IEnumerator ReloadCoroutine()
+    {
+        reloadGunAudio.Play();
+        while (reloadGunAudio.isPlaying)
+        {
+            yield return null;
+        }
+        player.ReloadGun();
     }
 }
